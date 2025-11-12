@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
-	"sort" // NEW
+	"os" // NEW
 	"sync"
 
 	"github.com/alisdairrankine/frienvironment"
@@ -14,56 +13,13 @@ import (
 
 // --- NEW: Windowing System ---
 
-type Window struct {
-	ID    int
-	X, Y  int32
-	W, H  int32
-	Z     int // z-index for draw/click order
-	Title string
-}
-
 const (
 	windowTitleHeight = 30 // Height of the title bar
 )
 
 var (
-	// Window management
-	windows    = make(map[int]*Window)
-	windowLock sync.Mutex
-	nextWinID  = 1
-	topZ       = 1 // Tracks the highest z-index
-
-	// Drag state
-	draggingWindowID = -1
-	dragOffsetX      int32
-	dragOffsetY      int32
+// Window management
 )
-
-// getSortedWindows returns a slice of windows, sorted by Z-index (bottom to top)
-func getSortedWindows() []*Window {
-	windowLock.Lock()
-	defer windowLock.Unlock()
-
-	list := make([]*Window, 0, len(windows))
-	for _, w := range windows {
-		list = append(list, w)
-	}
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].Z < list[j].Z
-	})
-	return list
-}
-
-// bringToFront gives a window the highest Z-index
-func bringToFront(id int) {
-	windowLock.Lock()
-	defer windowLock.Unlock()
-	if w, ok := windows[id]; ok {
-		topZ++
-		w.Z = topZ
-	}
-}
 
 // --- End Windowing System ---
 
@@ -113,6 +69,8 @@ func main() {
 		vm.ClearBuffer()
 	})
 
+	wm := frienvironment.NewWindowManager()
+
 	// CHANGED: All draw words are now window-relative
 
 	vm.AddWord("WIN.DRAW.RECT", "(id x y w h r g b a -- ) Draws a rect in a window", func() {
@@ -128,9 +86,7 @@ func main() {
 		id := vm.Stack.Pop()
 		fmt.Println("draw rect")
 		q(func() {
-			windowLock.Lock()
-			win, ok := windows[id]
-			windowLock.Unlock()
+			win, ok := wm.WindowByID(id)
 			if !ok {
 				return // Window was closed
 			}
@@ -156,9 +112,7 @@ func main() {
 		vm.ClearBuffer()
 
 		q(func() {
-			windowLock.Lock()
-			win, ok := windows[id]
-			windowLock.Unlock()
+			win, ok := wm.WindowByID(id)
 			if !ok {
 				return
 			}
@@ -178,31 +132,22 @@ func main() {
 		title := string(vm.ReadFromBuffer())
 		vm.ClearBuffer()
 
-		windowLock.Lock()
-		id := nextWinID
-		nextWinID++
-		topZ++
-		win := &Window{
-			ID:    id,
+		win := &frienvironment.Window{
 			X:     x,
 			Y:     y,
 			W:     w,
 			H:     h,
-			Z:     topZ,
 			Title: title,
 		}
-		windows[id] = win
-		windowLock.Unlock()
+		wm.NewWindow(win)
 
-		vm.Stack.Push(id)
+		vm.Stack.Push(win.ID)
 	})
 
 	// NEW: Word to create a window
 	vm.AddWord("WIN.DESTROY", "destroys a window", func() {
-		windowLock.Lock()
-		defer windowLock.Unlock()
 		id := vm.Stack.Pop()
-		delete(windows, id)
+		wm.DestroyWindow(id)
 
 	})
 
@@ -229,7 +174,7 @@ func main() {
 		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
 			hitWindow := false
 			// Get windows sorted top-to-bottom
-			sortedWindows := getSortedWindows()
+			sortedWindows := wm.SortedWindows()
 			// Loop from top to bottom
 			for i := len(sortedWindows) - 1; i >= 0; i-- {
 				win := sortedWindows[i]
@@ -238,15 +183,15 @@ func main() {
 				if rl.CheckCollisionPointRec(mousePos, winRec) {
 					// --- HIT A WINDOW ---
 					hitWindow = true
-					bringToFront(win.ID)
+					wm.BringToFront(win.ID)
 
 					titleBarRec := rl.NewRectangle(float32(win.X), float32(win.Y), float32(win.W), windowTitleHeight)
 
 					if rl.CheckCollisionPointRec(mousePos, titleBarRec) {
 						// Start dragging
-						draggingWindowID = win.ID
-						dragOffsetX = int32(mousePos.X) - win.X
-						dragOffsetY = int32(mousePos.Y) - win.Y
+						wm.DraggingWindowID = win.ID
+						wm.DragOffsetX = int32(mousePos.X) - win.X
+						wm.DragOffsetY = int32(mousePos.Y) - win.Y
 					} else {
 						fmt.Println("clicked")
 						// Clicked in content area, fire interrupt
@@ -269,18 +214,15 @@ func main() {
 			}
 		}
 
-		if rl.IsMouseButtonDown(rl.MouseButtonLeft) && draggingWindowID != -1 {
-			// Handle dragging
-			windowLock.Lock()
-			if w, ok := windows[draggingWindowID]; ok {
-				w.X = int32(mousePos.X) - dragOffsetX
-				w.Y = int32(mousePos.Y) - dragOffsetY
-			}
-			windowLock.Unlock()
+		if rl.IsMouseButtonDown(rl.MouseButtonLeft) && wm.DraggingWindowID != -1 {
+
+			x := int32(mousePos.X) - wm.DragOffsetX
+			y := int32(mousePos.Y) - wm.DragOffsetY
+			wm.MoveWindow(wm.DraggingWindowID, x, y)
 		}
 
 		if rl.IsMouseButtonReleased(rl.MouseButtonLeft) {
-			draggingWindowID = -1
+			wm.DraggingWindowID = -1
 		}
 		// --- End Input Logic ---
 
@@ -290,7 +232,7 @@ func main() {
 		rl.DrawText("Welcome to AliOS", 5, 5, 30, rl.Black)
 
 		// 1. Draw all window frames (sorted)
-		sortedWindows := getSortedWindows()
+		sortedWindows := wm.SortedWindows()
 		for _, win := range sortedWindows {
 			// Draw window shadow
 			rl.DrawRectangle(win.X+2, win.Y+2, win.W, win.H, rl.Gray)
