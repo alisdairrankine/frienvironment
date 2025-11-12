@@ -11,17 +11,9 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// --- NEW: Windowing System ---
-
 const (
 	windowTitleHeight = 30 // Height of the title bar
 )
-
-var (
-// Window management
-)
-
-// --- End Windowing System ---
 
 var (
 	drawQueue []func()
@@ -45,7 +37,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// CHANGED: New program to demonstrate windowing
 	app := frienvironment.Parse("Windowing Test", string(b))
 
 	vm := frienvironment.NewVM(app)
