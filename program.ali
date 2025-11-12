@@ -1,0 +1,29 @@
+'Loading... (1)'
+PRINT-STRING
+1000
+SLEEP
+
+'Loading... (2)'
+PRINT-STRING
+1000
+SLEEP
+
+'Loading... (3)'
+PRINT-STRING
+1000
+SLEEP
+
+'Hello World!'
+PRINT-STRING
+YIELD
+
+DEF PRINT-STRING
+    out: BUF
+    DUP 0 = IF
+        DROP
+        SYSCALL.OUT
+        RET
+    ELSE
+        :out
+    THEN
+RET
