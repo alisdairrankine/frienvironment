@@ -62,6 +62,7 @@ func (vm *VM) Run() error {
 
 		if addr, exists := vm.program.vars[step]; exists {
 			vm.Stack.Push(addr)
+			continue
 		}
 
 		return fmt.Errorf("unrecognised word: %s", step)

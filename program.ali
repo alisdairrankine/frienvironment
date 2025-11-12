@@ -1,27 +1,51 @@
-'Loading... (1)'
-PRINT-STRING
-1000
-SLEEP
+// --- INTERRUPT HANDLERS ---
 
-'Loading... (2)'
-PRINT-STRING
-1000
-SLEEP
+// Register for window clicks
+&ON-WIN-CLICK
+3
+SYSCALL.INTERRUPT.REGISTER
 
-'Loading... (3)'
-PRINT-STRING
-1000
-SLEEP
+// --- CREATE WINDOWS ---
+"Ali's Cool App"
+// Load title into buffer
+OUTPUT-STRING
+100 100 200 150 // x y w h
+WIN.CREATE     // (x y w h -- id)
+VAR winA         // Store id
+winA STORE
 
-'Hello World!'
-PRINT-STRING
-YIELD
+// --- DRAW IN WINDOWS ---
+// winA LOAD // id
+// 5 5 150 30 0 255 0 255
+// WIN.DRAW.RECT
 
-DEF PRINT-STRING
+winA LOAD
+"This will be a text editor, one day"
+// Load string into buffer
+OUTPUT-STRING
+10 40 10 255 255 255 255 // id x y size r g b a
+WIN.DRAW.TEXT
+
+YIELD // Wait for interrupts
+
+// --- INTERRUPT FUNCTIONS ---
+
+
+// (id x y -- )
+DEF ON-WIN-CLICK
+    //winA LOAD
+    //WIN.DESTROY
+    // Clicked inside a window, draw a circle
+    5 5           // w h (using as radius)
+    0 0 255 255   // r g b a
+    WIN.DRAW.RECT // (id x y w h r g b a -- )
+RET
+
+
+DEF OUTPUT-STRING
     out: BUF
     DUP 0 = IF
         DROP
-        SYSCALL.OUT
         RET
     ELSE
         :out
