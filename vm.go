@@ -9,7 +9,7 @@ import (
 )
 
 type VM struct {
-	stack   Stack[int]
+	Stack   *Stack[int]
 	words   map[string]func()
 	program Program
 	buf     []byte
@@ -40,7 +40,7 @@ func (vm *VM) Run() error {
 		}
 
 		if n, err := strconv.Atoi(step); err == nil {
-			vm.stack.Push(n)
+			vm.Stack.Push(n)
 			continue
 		}
 
@@ -56,12 +56,12 @@ func (vm *VM) Run() error {
 		}
 
 		if strings.HasPrefix(step, `"`) && strings.HasSuffix(step, `"`) {
-			vm.stack.PushMany(stringToIntSlice(strings.Trim(step, `"`))...)
+			vm.Stack.PushMany(stringToIntSlice(strings.Trim(step, `"`))...)
 			continue
 		}
 
 		if addr, exists := vm.program.vars[step]; exists {
-			vm.stack.Push(addr)
+			vm.Stack.Push(addr)
 		}
 
 		return fmt.Errorf("unrecognised word: %s", step)
@@ -78,92 +78,92 @@ func (vm *VM) AddWord(word, docs string, wordFn func()) {
 func (vm *VM) init() {
 
 	vm.AddWord("+", "(a b -- a+b) Adds 2 numbers", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
-		vm.stack.Push(b + a)
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
+		vm.Stack.Push(b + a)
 	})
 
 	vm.AddWord("-", "(a b -- b-a) Subtracts a number", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
-		vm.stack.Push(b - a)
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
+		vm.Stack.Push(b - a)
 	})
 	vm.AddWord("/", "(a b -- b/a) Divides a number", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
-		vm.stack.Push(b / a)
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
+		vm.Stack.Push(b / a)
 	})
 
 	vm.AddWord("*", "(a b -- a*b) Multiplies 2 numbers", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
-		vm.stack.Push(b * a)
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
+		vm.Stack.Push(b * a)
 	})
 
 	vm.AddWord("=", "(a b -- a=b?1:0) Checks equality", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
 		if b == a {
-			vm.stack.Push(1)
+			vm.Stack.Push(1)
 		} else {
-			vm.stack.Push(0)
+			vm.Stack.Push(0)
 		}
 	})
 
 	vm.AddWord("<", "(a b -- b<a?1:0) Checks b is less than a", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
 		if b < a {
-			vm.stack.Push(1)
+			vm.Stack.Push(1)
 		} else {
-			vm.stack.Push(0)
+			vm.Stack.Push(0)
 		}
 	})
 
 	vm.AddWord(">", "(a b -- b>a?1:0) Checks b is greater than a", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
 		if b > a {
-			vm.stack.Push(1)
+			vm.Stack.Push(1)
 		} else {
-			vm.stack.Push(0)
+			vm.Stack.Push(0)
 		}
 	})
 
 	vm.AddWord(".", "(a -- ) Outputs top stack value", func() {
-		fmt.Println(vm.stack.Pop())
+		fmt.Println(vm.Stack.Pop())
 	})
 
 	vm.AddWord("DUP", "(a -- a a) Duplicates top stack value", func() {
-		a := vm.stack.Pop()
-		vm.stack.Push(a)
-		vm.stack.Push(a)
+		a := vm.Stack.Pop()
+		vm.Stack.Push(a)
+		vm.Stack.Push(a)
 	})
 
 	vm.AddWord("DROP", "(a -- ) Removes top stack value", func() {
-		vm.stack.Pop()
+		vm.Stack.Pop()
 	})
 
 	vm.AddWord("SWAP", "(a b -- b a) Swaps top 2 stack values", func() {
-		a := vm.stack.Pop()
-		b := vm.stack.Pop()
-		vm.stack.Push(a)
-		vm.stack.Push(b)
+		a := vm.Stack.Pop()
+		b := vm.Stack.Pop()
+		vm.Stack.Push(a)
+		vm.Stack.Push(b)
 	})
 
 	vm.AddWord("STORE", "(a b -- ) Stores a in memory address b", func() {
-		addr := vm.stack.Pop()
-		data := vm.stack.Pop()
+		addr := vm.Stack.Pop()
+		data := vm.Stack.Pop()
 		vm.memory[addr] = data
 	})
 
 	vm.AddWord("LOAD", "(a -- b) Loads memory address a", func() {
-		addr := vm.stack.Pop()
-		vm.stack.Push(vm.memory[addr])
+		addr := vm.Stack.Pop()
+		vm.Stack.Push(vm.memory[addr])
 	})
 
 	vm.AddWord("IF", "If top stack value is 1, continue to next step, otherwise skip to ELSE", func() {
-		condition := vm.stack.Pop()
+		condition := vm.Stack.Pop()
 		if condition == 0 {
 			// Skip to ELSE or THEN
 			depth := 1
@@ -214,7 +214,7 @@ func (vm *VM) init() {
 	})
 
 	vm.AddWord("GOTO", "(a --) Jump to top stack step", func() {
-		vm.program.ptr = vm.stack.Pop()
+		vm.program.ptr = vm.Stack.Pop()
 	})
 
 	vm.AddWord("RET", "Return to previous return pointer", func() {
@@ -226,7 +226,7 @@ func (vm *VM) init() {
 	})
 
 	vm.AddWord("BUF", "(a -- ) Store byte in output buffer", func() {
-		b := vm.stack.Pop()
+		b := vm.Stack.Pop()
 		vm.buf = append(vm.buf, byte(b))
 	})
 
@@ -240,7 +240,7 @@ func (vm *VM) init() {
 	})
 
 	vm.AddWord("SLEEP", "(a -- ) Sleep for top stack value milliseconds", func() {
-		s := vm.stack.Pop()
+		s := vm.Stack.Pop()
 
 		time.Sleep(time.Millisecond * time.Duration(s))
 	})
@@ -250,8 +250,9 @@ func (vm *VM) init() {
 	})
 
 	vm.AddWord("SYSCALL.INTERRUPT.REGISTER", "DO NOT USE: Experimental interrupt system", func() {
-		functionPtr := vm.stack.Pop()
-		interruptType := vm.stack.Pop()
+		interruptType := vm.Stack.Pop()
+		functionPtr := vm.Stack.Pop()
+		fmt.Println("interrupt registered", functionPtr, interruptType)
 		vm.program.interruptHandlers[InterruptType(interruptType)] = functionPtr
 	})
 
@@ -259,7 +260,7 @@ func (vm *VM) init() {
 
 func NewVM(app Program) *VM {
 	vm := &VM{
-		stack:   Stack[int]{},
+		Stack:   &Stack[int]{},
 		words:   map[string]func(){},
 		program: app,
 		memory:  [4096]int{},
@@ -287,9 +288,10 @@ func (vm *VM) State() string {
 
 func (vm *VM) Interrupt(typ InterruptType) {
 	if handler, exists := vm.program.interruptHandlers[typ]; exists {
+		vm.program.rp.Push(vm.program.ptr - 1)
 		vm.program.state = "waiting"
-		vm.program.rp.Push(vm.program.ptr)
 		vm.program.ptr = handler
+		vm.program.state = "running"
 	}
 }
 

@@ -11,36 +11,43 @@ import (
 
 func main() {
 
-	app := frienvironment.Parse("Hello World", `
-"Loading... (1)"
-PRINT-STRING
-1000
-SLEEP
+	app := frienvironment.Parse("GUI Test", `
+// --- INTERRUPT SETUP ---
+&ON-CLICK      // Get pointer to ON-CLICK function
+2              // Interrupt type 2 (InterruptTypeMouseDown)
+SYSCALL.INTERRUPT.REGISTER
 
-"Loading... (2)"
-PRINT-STRING
-1000
-SLEEP
+// --- INITIAL DRAW ---
+// Set a blue background
+0 100 200 255 DRAW.CLEAR
 
-"Loading... (3)"
-PRINT-STRING
-1000
-SLEEP
+// Draw a title
+"Click to draw a rectangle!"
+PRINT-STRING-TO-BUFFER
+10 10 20 255 255 255 255 DRAW.TEXT
 
-"Hello World!"
-PRINT-STRING
-YIELD
+YIELD // Halt the VM and wait for interrupts
 
-DEF PRINT-STRING
+// --- INTERRUPT HANDLER ---
+// (x y -- )
+DEF ON-CLICK
+    // When triggered, X and Y are on the stack
+    10 10           // width, height
+    255 255 0 255   // r, g, b, a (yellow)
+    DRAW.RECT       // (x y w h r g b a -- )
+    RET             // Return from interrupt
+
+// Function to load a string into the buffer
+DEF PRINT-STRING-TO-BUFFER
     out: BUF
     DUP 0 = IF
         DROP
-        SYSCALL.OUT
         RET
     ELSE
         :out
     THEN
-RET`)
+RET
+`)
 
 	vm := frienvironment.NewVM(app)
 
@@ -53,11 +60,52 @@ RET`)
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
 
-	alert := ""
+	dq := &frienvironment.DrawQueue{}
 
-	vm.AddWord("SYSCALL.OUT", "DO NOT USE: debug function to output text", func() {
-		alert = string(vm.ReadFromBuffer())
+	vm.AddWord("DRAW.CLEAR", "(r g b a -- ) Clears background", func() {
+
+		a := uint8(vm.Stack.Pop())
+		b := uint8(vm.Stack.Pop())
+		g := uint8(vm.Stack.Pop())
+		r := uint8(vm.Stack.Pop())
+
+		dq.AddCommand(func() {
+			rl.ClearBackground(rl.NewColor(r, g, b, a))
+		})
+	})
+
+	vm.AddWord("DRAW.RECT", "(x y w h r g b a -- ) Draws a rectangle", func() {
+		fmt.Println("rect", vm.Stack)
+		a := uint8(vm.Stack.Pop())
+		b := uint8(vm.Stack.Pop())
+		g := uint8(vm.Stack.Pop())
+		r := uint8(vm.Stack.Pop())
+		h := int32(vm.Stack.Pop())
+		w := int32(vm.Stack.Pop())
+		y := int32(vm.Stack.Pop())
+		x := int32(vm.Stack.Pop())
+
+		dq.AddCommand(func() {
+			rl.DrawRectangle(x, y, w, h, rl.NewColor(r, g, b, a))
+		})
+	})
+
+	vm.AddWord("DRAW.TEXT", "(x y size r g b a -- ) Draws text from buffer", func() {
+
+		a := uint8(vm.Stack.Pop())
+		b := uint8(vm.Stack.Pop())
+		g := uint8(vm.Stack.Pop())
+		r := uint8(vm.Stack.Pop())
+		size := int32(vm.Stack.Pop())
+		y := int32(vm.Stack.Pop())
+		x := int32(vm.Stack.Pop())
+
+		text := string(vm.ReadFromBuffer())
 		vm.ClearBuffer()
+
+		dq.AddCommand(func() {
+			rl.DrawText(text, x, y, size, rl.NewColor(r, g, b, a))
+		})
 	})
 
 	go func() {
@@ -71,12 +119,21 @@ RET`)
 
 	}()
 	for !rl.WindowShouldClose() {
+		// --- NEW: INPUT HANDLING ---
+		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
+			fmt.Print("CLICK")
+			pos := rl.GetMousePosition()
+			// Push Y, then X, so VM pops X then Y
+			vm.Stack.Push(int(pos.X))
+			vm.Stack.Push(int(pos.Y))
+			vm.Interrupt(frienvironment.InterruptTypeMouseDown)
+		}
 		rl.BeginDrawing()
 
 		rl.ClearBackground(rl.RayWhite)
-		if alert != "" {
-			rl.DrawText(alert, 190, 200, 20, rl.Black)
-		}
+
+		dq.Run()
+
 		rl.EndDrawing()
 	}
 

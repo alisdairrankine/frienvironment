@@ -11,13 +11,14 @@ type InterruptType int
 const (
 	InterruptTypeNULL       InterruptType = 0
 	InterruptTypeKeyPressed InterruptType = 1
+	InterruptTypeMouseDown  InterruptType = 2
 )
 
 type Program struct {
 	name  string
 	code  []string
 	ptr   int
-	rp    Stack[int]
+	rp    *Stack[int]
 	state string
 
 	functions map[string]int
@@ -35,6 +36,7 @@ func LoadProgram(name string, code []string) Program {
 		labels:            map[string]int{},
 		vars:              map[string]int{},
 		interruptHandlers: map[InterruptType]int{},
+		rp:                &Stack[int]{},
 	}
 
 	nextFreeCell := 1000
