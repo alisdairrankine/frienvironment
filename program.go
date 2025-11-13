@@ -18,6 +18,9 @@ type Program struct {
 	vars      map[string]int
 
 	interruptHandlers map[InterruptType]int
+
+	// Inbox  Buffer
+	// Outbox Buffer
 }
 
 func LoadProgram(name string, code []string) Program {

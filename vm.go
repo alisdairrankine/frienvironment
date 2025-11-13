@@ -76,6 +76,13 @@ func (vm *VM) AddWord(word, docs string, wordFn func()) {
 	vm.docs += fmt.Sprintf("- %q: %s\n", word, docs)
 }
 
+func (vm *VM) AddSyscall(word, docs string, wordFn func(stack *Stack[int])) {
+	vm.words[word] = func() {
+		wordFn(vm.Stack)
+	}
+	vm.docs += fmt.Sprintf("- %q: %s\n", word, docs)
+}
+
 func (vm *VM) init() {
 
 	vm.AddWord("+", "(a b -- a+b) Adds 2 numbers", func() {
