@@ -1,0 +1,29 @@
+// set output buffer
+push16 0x0311
+push16 0xF000
+store16
+
+// route data from network to output buffer
+push16 0x0309
+push16 0xF000
+store16
+
+
+
+// set callback
+push16 0x030B
+push16 0x0416
+store16
+
+yield
+
+// get message length
+push16 0x0313
+push16 0x030E
+load
+store
+push16 0x0314
+push 0
+store
+
+halt

@@ -1,0 +1,45 @@
+// expect switch at device 0
+
+
+// write Ping!
+push16 0xF000
+push 'P'
+Store
+
+push16 0xF001
+push 'i'
+Store
+
+push16 0xF002
+push 'n'
+Store
+
+push16 0xF003
+push 'g'
+Store
+
+push16 0xF003
+push '!'
+Store
+
+// set payload address
+push16 0x0307
+push16 0xF000
+store16
+
+// set message length
+push16 0x0306
+push 5
+store
+
+// set destination to port 0
+push16 0x0302
+push 0
+store
+
+// send message
+push16 0x030D
+push 0
+store
+
+halt
