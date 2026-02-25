@@ -28,10 +28,11 @@ func main() {
 	sys.Spawn(receiver, func(vm *vm.VM) {
 		netSwitch.Attach(0, vm)
 		vm.RegisterDevice(1, devices.NewTerminal(vm))
-		vm.Debug = true
+		// vm.Debug = true
 	})
 	sys.Spawn(sender, func(vm *vm.VM) {
 		netSwitch.Attach(0, vm)
+
 	})
 
 	time.Sleep(100 * time.Second)

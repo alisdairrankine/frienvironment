@@ -4,23 +4,23 @@
 // write Ping!
 push16 0xF000
 push 'P'
-Store
+store
 
 push16 0xF001
 push 'i'
-Store
+store
 
 push16 0xF002
 push 'n'
-Store
+store
 
 push16 0xF003
 push 'g'
-Store
+store
 
-push16 0xF003
+push16 0xF004
 push '!'
-Store
+store
 
 // set payload address
 push16 0x0307

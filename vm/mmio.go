@@ -23,15 +23,13 @@ func (m *MMIO) ReadByte(addr uint16) byte {
 	return m.data[addr]
 }
 
-func (m *MMIO) ReadData(addr uint16, data []byte) {
-	copy(data, m.data[addr:int(addr)+len(data)])
-	fmt.Println("READ DATA", string(m.data[addr:int(addr)+len(data)]), len(data))
-
+func (m *MMIO) ReadData(addr uint16, length int) []byte {
+	return m.data[addr : int(addr)+length]
 }
 
 func (m *MMIO) WriteData(addr uint16, data []byte) {
-	fmt.Println("WRITE DATA", string(data), len(data))
-	copy(m.data[addr:], data[:])
+	fmt.Printf("WRITE DATA %X\n", addr)
+	copy(m.data[addr:int(addr)+len(data)], data[:])
 }
 
 func (m *MMIO) writeToDevice(addr uint16, data byte) {

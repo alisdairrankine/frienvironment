@@ -169,11 +169,13 @@ func ParseLine(line string) []byte {
 				data = strings.TrimPrefix(data, "0x")
 				base = 16
 			}
-			d, _ := strconv.ParseInt(data, base, 16)
+			d, _ := strconv.ParseUint(data, base, 16)
 			if expect2Bytes {
-				out = append(out, byte(d&0xFF00>>8))
+				high := byte((d & 0xFF00) >> 8)
+				out = append(out, high)
 			}
-			out = append(out, 0xFF&byte(d))
+			low := 0xFF & byte(d)
+			out = append(out, low)
 
 		}
 	}

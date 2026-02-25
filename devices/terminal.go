@@ -48,8 +48,7 @@ func (t *Terminal) Write(addr uint16, data byte) {
 		t.DataLength = data
 		fmt.Printf("data length : %d\n", data)
 	case 0x04:
-		data := make([]byte, t.DataLength)
-		t.vm.MMIO.ReadData(t.DataAddr, data)
+		data := t.vm.MMIO.ReadData(t.DataAddr, int(t.DataLength))
 		fmt.Println("OUT: ", string(data))
 	}
 }

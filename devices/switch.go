@@ -57,6 +57,7 @@ func (s *Switch) Send(sourceAddr, destinationAddr, signalID byte, data []byte) e
 	if port == nil {
 		return errors.New("host not found")
 	}
+	fmt.Println("send: ", string(data))
 	port.Receive(sourceAddr, signalID, data)
 	return nil
 }
@@ -110,8 +111,7 @@ func (p *Port) Write(addr uint16, data byte) {
 		p.callbackAddr = (uint16(data)) | (p.callbackAddr & 0xFF00)
 		fmt.Printf("callback: %X\n", p.callbackAddr)
 	case 0x0D:
-		data := make([]byte, p.messageLength)
-		p.vm.MMIO.ReadData(p.messageAddr, data)
+		data := p.vm.MMIO.ReadData(p.messageAddr, int(p.messageLength))
 		p.s.Send(p.port, p.destinationPort, p.sendSignal, data)
 	}
 }

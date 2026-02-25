@@ -3,6 +3,7 @@ package vm
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
 )
 
 type VM struct {
@@ -208,6 +209,15 @@ func (vm *VM) execute(instr byte) {
 	case YieldInstruction:
 		vm.SetFlag(FlagWaiting)
 	case HaltInstruction:
+		if vm.Debug {
+			f, err := os.Create("dump.hex")
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				f.Write(vm.MMIO.data[:])
+				f.Close()
+			}
+		}
 		vm.UnsetFlag(FlagFault)
 		vm.running = false
 		vm.advancePC(1)
@@ -510,7 +520,9 @@ func (vm *VM) execute(instr byte) {
 	case StoreInstruction:
 		c := vm.PopStack()
 		addr := vm.PopStack16()
-
+		if vm.Debug {
+			fmt.Printf("%x - %x\n", addr, c)
+		}
 		vm.MMIO.WriteByte(addr, c)
 		vm.advancePC(1)
 	case Store16Instruction:

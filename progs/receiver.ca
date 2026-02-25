@@ -23,7 +23,7 @@ push16 0x030E
 load
 store
 push16 0x0314
-push 0
+push 1
 store
 
 halt
